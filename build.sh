@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 
 rm lattice_filter.so
+rm -r build_dir
 mkdir build_dir
 cd build_dir
 
 
 CUDA_COMPILER=/usr/local/cuda/bin/nvcc
-CXX_COMPILER=/usr/bin/g++-4.8
+CXX_COMPILER=/usr/bin/g++
 CUDA_INCLUDE=/usr/local/cuda/include/
 
 SPATIAL_DIMS=2
 INPUT_CHANNELS=3
 REFERENCE_CHANNELS=3
-MAKE_TESTS=False
+MAKE_TESTS=True
 
 cmake -DCMAKE_BUILD_TYPE=Debug -D CMAKE_CUDA_COMPILER=${CUDA_COMPILER} \
                                -D CMAKE_CXX_COMPILER=${CXX_COMPILER} \
@@ -28,7 +29,3 @@ cmake -DCMAKE_BUILD_TYPE=Debug -D CMAKE_CUDA_COMPILER=${CUDA_COMPILER} \
 make
 
 cp lattice_filter.so ../
-cd ..
-rm -r build_dir
-
-
