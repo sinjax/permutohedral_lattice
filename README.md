@@ -88,4 +88,7 @@ output = module.lattice_filter(input, reference_image, bilateral=True, theta_alp
 4. The gradients of the TensorFlow Op don't match numerically calculated gradients for some values of the various theta 
 parameters. I suspect it has something to do with numerical issues when dividing by numbers close to zero.
 
+#### Docker
+Alter your runtime default following [this](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/index.html#using-nv-container-runtime) description.
+
 #### Collaborators are welcome
