@@ -441,7 +441,7 @@ public:
 
     void filter(T * output, const T* input, const T* positions, bool reverse) {
         splat(positions, input);
-        blur(reverse);
+        //blur(reverse);
         slice(output);
     }
 
