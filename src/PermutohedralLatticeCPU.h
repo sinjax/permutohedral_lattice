@@ -32,16 +32,18 @@ SOFTWARE.*/
  * dimensional space.
  */
 /***************************************************************/
-template <typename T>class HashTableCPU {
+template <typename T>
+class HashTableCPU {
 public:
-    short *keys;
-    T *values;
-    int *entries;
+    short* keys;
+    T* values;
+    int* entries;
     size_t capacity, filled;
     int pd, vd;
 
     /* Hash function used in this implementation. A simple base conversion. */
-    size_t hash(const short *key) {
+    size_t hash(const short* key)
+    {
         size_t k = 0;
         for (int i = 0; i < pd; i++) {
             k += key[i];
@@ -56,10 +58,13 @@ public:
     *  create: a flag specifying whether an entry should be created,
     *          should an entry with the given key not found.
     */
-    int lookupOffset(const short *key, size_t h, bool create = true) {
+    int lookupOffset(const short* key, size_t h, bool create = true)
+    {
 
         // Double hash table size if necessary
-        if (filled >= (capacity / 2) - 1) { grow(); }
+        if (filled >= (capacity / 2) - 1) {
+            grow();
+        }
 
         // Find the entry with the given key
         while (true) {
@@ -79,7 +84,7 @@ public:
             // check if the cell has a matching key
             bool match = true;
             for (int i = 0; i < pd && match; i++)
-                match = keys[*e*pd + i] == key[i];
+                match = keys[*e * pd + i] == key[i];
             if (match)
                 return *e * vd;
 
@@ -91,14 +96,15 @@ public:
     }
 
     /* Grows the size of the hash table */
-    void grow() {
+    void grow()
+    {
         printf("Resizing hash table\n");
 
         size_t oldCapacity = capacity;
         capacity *= 2;
 
         // Migrate the value vectors.
-        auto newValues = new T[vd * capacity / 2]{0};
+        auto newValues = new T[vd * capacity / 2]{ 0 };
         std::memcpy(newValues, values, sizeof(T) * vd * filled);
         delete[] values;
         values = newValues;
@@ -110,7 +116,7 @@ public:
         keys = newKeys;
 
         auto newEntries = new int[capacity];
-        memset(newEntries, -1, capacity*sizeof(int));
+        memset(newEntries, -1, capacity * sizeof(int));
 
         // Migrate the table of indices.
         for (size_t i = 0; i < oldCapacity; i++) {
@@ -119,7 +125,8 @@ public:
             size_t h = hash(keys + entries[i] * pd) % capacity;
             while (newEntries[h] != -1) {
                 h++;
-                if (h == capacity) h = 0;
+                if (h == capacity)
+                    h = 0;
             }
             newEntries[h] = entries[i];
         }
@@ -132,16 +139,20 @@ public:
      *  pd_: the dimensionality of the position vectors on the hyperplane.
      *  vd_: the dimensionality of the value vectors
      */
-    HashTableCPU(int pd_, int vd_) : pd(pd_), vd(vd_) {
+    HashTableCPU(int pd_, int vd_)
+        : pd(pd_)
+        , vd(vd_)
+    {
         capacity = 1 << 15;
         filled = 0;
         entries = new int[capacity];
-        memset(entries, -1, capacity*sizeof(int));
+        memset(entries, -1, capacity * sizeof(int));
         keys = new short[pd * capacity / 2];
-        values = new T[vd * capacity / 2]{0};
+        values = new T[vd * capacity / 2]{ 0 };
     }
 
-    ~HashTableCPU(){
+    ~HashTableCPU()
+    {
         delete[](entries);
         delete[](keys);
         delete[](values);
@@ -151,16 +162,17 @@ public:
     int size() { return filled; }
 
     // Returns a pointer to the keys array.
-    short *getKeys() { return keys; }
+    short* getKeys() { return keys; }
 
     // Returns a pointer to the values array.
-    T *getValues() { return values; }
+    T* getValues() { return values; }
 
     /* Looks up the value vector associated with a given key vector.
      *        k : pointer to the key vector to be looked up.
      *   create : true if a non-existing key should be created.
      */
-    T *lookup(short *k, bool create = true) {
+    T* lookup(short* k, bool create = true)
+    {
         size_t h = hash(k) % capacity;
         int offset = lookupOffset(k, h, create);
         if (offset < 0)
@@ -170,8 +182,8 @@ public:
     }
 };
 
-
-template<typename T> class PermutohedralLatticeCPU {
+template <typename T>
+class PermutohedralLatticeCPU {
 
     int pd, vd, N;
     std::unique_ptr<T[]> scaleFactor;
@@ -191,7 +203,8 @@ template<typename T> class PermutohedralLatticeCPU {
     std::unique_ptr<MatrixEntry[]> matrix;
     int idx;
 
-    std::unique_ptr<T[]> compute_scale_factor() {
+    std::unique_ptr<T[]> compute_scale_factor()
+    {
         auto scaleFactor = std::unique_ptr<T[]>(new T[pd]);
 
         /* We presume that the user would like to do a Gaussian blur of standard deviation
@@ -216,8 +229,8 @@ template<typename T> class PermutohedralLatticeCPU {
         return scaleFactor;
     }
 
-
-    void embed_position_vector(const T *position) {
+    void embed_position_vector(const T* position)
+    {
         // embed position vector into the hyperplane
         // first rotate position into the (pd+1)-dimensional hyperplane
         // sm contains the sum of 1..n of our feature vector
@@ -230,7 +243,8 @@ template<typename T> class PermutohedralLatticeCPU {
         elevated[0] = sm;
     }
 
-    void find_enclosing_simplex(){
+    void find_enclosing_simplex()
+    {
         // Find the closest 0-colored simplex through rounding
         // greedily search for the closest zero-colored lattice point
         short sum = 0;
@@ -239,9 +253,9 @@ template<typename T> class PermutohedralLatticeCPU {
             T up = ceil(v) * (pd + 1);
             T down = floor(v) * (pd + 1);
             if (up - elevated[i] < elevated[i] - down) {
-                rem0[i] = (short) up;
+                rem0[i] = (short)up;
             } else {
-                rem0[i] = (short) down;
+                rem0[i] = (short)down;
             }
             sum += rem0[i];
         }
@@ -272,12 +286,13 @@ template<typename T> class PermutohedralLatticeCPU {
         }
     }
 
-    void compute_barycentric_coordinates() {
-        for(int i = 0; i < pd + 2; i++)
-            barycentric[i]=0;
+    void compute_barycentric_coordinates()
+    {
+        for (int i = 0; i < pd + 2; i++)
+            barycentric[i] = 0;
         // Compute the barycentric coordinates (p.10 in [Adams etal 2010])
         for (int i = 0; i <= pd; i++) {
-            T delta = (elevated[i] - rem0[i]) *  (1.0 / (pd + 1));
+            T delta = (elevated[i] - rem0[i]) * (1.0 / (pd + 1));
             barycentric[pd - rank[i]] += delta;
             barycentric[pd - rank[i] + 1] -= delta;
         }
@@ -285,7 +300,8 @@ template<typename T> class PermutohedralLatticeCPU {
         barycentric[0] += 1.0 + barycentric[pd + 1];
     }
 
-    void splat_point(const T *position, const T * value) {
+    void splat_point(const T* position, const T* value)
+    {
 
         embed_position_vector(position);
 
@@ -304,7 +320,7 @@ template<typename T> class PermutohedralLatticeCPU {
             }
 
             // Retrieve pointer to the value at this vertex.
-            T *val = hashTable.lookup(key, true);
+            T* val = hashTable.lookup(key, true);
             // Accumulate values with barycentric weight.
             for (int i = 0; i < vd - 1; i++)
                 val[i] += barycentric[remainder] * value[i];
@@ -319,18 +335,19 @@ template<typename T> class PermutohedralLatticeCPU {
         delete[] key;
     }
 
-    void splat(const T * positions, const T * values){
+    void splat(const T* positions, const T* values)
+    {
         for (int n = 0; n < N; n++) {
-            splat_point(&(positions[n*pd]), &(values[n*(vd-1)]));
+            splat_point(&(positions[n * pd]), &(values[n * (vd - 1)]));
         }
     }
-
 
     /* Performs slicing out of position vectors. Note that the barycentric weights and the simplex
     * containing each position vector were calculated and stored in the splatting step.
     * We may reuse this to accelerate the algorithm. (See pg. 6 in paper.)
     */
-    void slice_point(T* out, int n) {
+    void slice_point(T* out, int n)
+    {
 
         T* base = hashTable.getValues();
 
@@ -348,18 +365,18 @@ template<typename T> class PermutohedralLatticeCPU {
         for (int j = 0; j < vd - 1; j++) {
             out[n * (vd - 1) + j] = val[j] * scale;
         }
-
     }
 
-    void slice(T* out){
+    void slice(T* out)
+    {
         for (int n = 0; n < N; n++) {
             slice_point(out, n);
         }
     }
 
-
     /* Performs a Gaussian blur along each projected axis in the hyperplane. */
-    void blur(bool reverse) {
+    void blur(bool reverse)
+    {
 
         // Prepare arrays
         auto n1_key = new short[pd + 1];
@@ -369,16 +386,16 @@ template<typename T> class PermutohedralLatticeCPU {
         //auto new_values = new T[vd * hashTable.size()];
         auto new_values = new T[vd * hashTable.capacity];
 
-        auto zero = new T[vd]{0};
+        auto zero = new T[vd]{ 0 };
         //for (int k = 0; k < vd; k++)
         //    zero[k] = 0;
 
         // For each of pd+1 axes,
-        for (int remainder=reverse?pd:0; remainder >= 0 && remainder <= pd; reverse?remainder--:remainder++){
+        for (int remainder = reverse ? pd : 0; remainder >= 0 && remainder <= pd; reverse ? remainder-- : remainder++) {
             // For each vertex in the lattice,
             for (int i = 0; i < hashTable.size(); i++) { // blur point i in dimension j
 
-                short *key = hashTable.getKeys() + i * pd; // keys to current vertex
+                short* key = hashTable.getKeys() + i * pd; // keys to current vertex
                 for (int k = 0; k < pd; k++) {
                     n1_key[k] = key[k] + 1;
                     n2_key[k] = key[k] - 1;
@@ -387,8 +404,8 @@ template<typename T> class PermutohedralLatticeCPU {
                 n1_key[remainder] = key[remainder] - pd;
                 n2_key[remainder] = key[remainder] + pd; // keys to the neighbors along the given axis.
 
-                T *oldVal = hashTable.values + i * vd;
-                T *newVal = new_values + i * vd;
+                T* oldVal = hashTable.values + i * vd;
+                T* newVal = new_values + i * vd;
 
                 T *n1_value, *n2_value;
 
@@ -415,8 +432,12 @@ template<typename T> class PermutohedralLatticeCPU {
     }
 
 public:
-
-    PermutohedralLatticeCPU(int pd_, int vd_, int N_): pd(pd_), vd(vd_), N(N_), hashTable(pd_, vd_) {
+    PermutohedralLatticeCPU(int pd_, int vd_, int N_)
+        : pd(pd_)
+        , vd(vd_)
+        , N(N_)
+        , hashTable(pd_, vd_)
+    {
 
         // Allocate storage for various arrays
         matrix = std::unique_ptr<MatrixEntry[]>(new MatrixEntry[N * (pd + 1)]);
@@ -436,44 +457,39 @@ public:
         barycentric = std::unique_ptr<T[]>(new T[pd + 2]);
         //val
         val = std::unique_ptr<T[]>(new T[vd]);
-
     }
 
-    void filter(T * output, const T* input, const T* positions, bool reverse) {
+    void filter(T* output, const T* input, const T* positions, bool reverse)
+    {
         splat(positions, input);
         //blur(reverse);
         slice(output);
     }
-
 };
 
-
-
 template <typename T>
-static void compute_kernel_cpu(const T * reference,
-                               T * positions,
-                               int num_super_pixels,
-                               int reference_channels,
-                               int n_sdims,
-                               const int *sdims,
-                               T spatial_std,
-                               T feature_std){
+static void compute_kernel_cpu(const T* reference,
+    T* positions,
+    int num_super_pixels,
+    int reference_channels,
+    int n_sdims,
+    const int* sdims,
+    T spatial_std,
+    T feature_std)
+{
 
     int num_dims = n_sdims + reference_channels;
 
-    for(int idx = 0; idx < num_super_pixels; idx++){
+    for (int idx = 0; idx < num_super_pixels; idx++) {
         int divisor = 1;
-        for(int sdim = n_sdims - 1; sdim >= 0; sdim--){
+        for (int sdim = n_sdims - 1; sdim >= 0; sdim--) {
             positions[num_dims * idx + sdim] = ((idx / divisor) % sdims[sdim]) / spatial_std;
             divisor *= sdims[sdim];
         }
-        for(int channel = 0; channel < reference_channels; channel++){
+        for (int channel = 0; channel < reference_channels; channel++) {
             positions[num_dims * idx + n_sdims + channel] = reference[idx * reference_channels + channel] / feature_std;
         }
     }
 };
-
-
-
 
 #endif //PERMUTOHEDRAL_LATTICE_CPU_H

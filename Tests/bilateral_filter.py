@@ -22,7 +22,8 @@ tf_reference_image = tf.constant(np.array(im)/255.0, dtype=tf.float32)
 tf_input_batch = tf.stack([tf_input_image, tf_input_image])
 tf_reference_batch = tf.stack([tf_reference_image, tf_reference_image])
 
-output = module.lattice_filter(tf_input_batch, tf_reference_batch, theta_alpha=theta_alpha, theta_beta=theta_beta)
+output = module.lattice_filter(
+    tf_input_batch, tf_reference_batch, theta_alpha=theta_alpha, theta_beta=theta_beta)
 
 with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
     o = np.round(sess.run(output) * 255).astype(np.uint8)

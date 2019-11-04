@@ -23,24 +23,25 @@ SOFTWARE.*/
 #ifndef PERMUTOHEDRAL_LATTICE_DEVICEMEMORYALLOCATOR_H
 #define PERMUTOHEDRAL_LATTICE_DEVICEMEMORYALLOCATOR_H
 
-
 #include <cuda_runtime.h>
 // function for debugging cuda calls
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+#define gpuErrchk(ans)                        \
+    {                                         \
+        gpuAssert((ans), __FILE__, __LINE__); \
+    }
+inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true)
 {
-    if(code != cudaSuccess) 
-    {
-        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-        if (abort) exit(code);
+    if (code != cudaSuccess) {
+        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+        if (abort)
+            exit(code);
     }
 }
 
 #ifdef GOOGLE_CUDA
 
-#include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/op.h"
-
+#include "tensorflow/core/framework/op_kernel.h"
 
 using namespace tensorflow;
 
@@ -53,28 +54,36 @@ class DeviceMemoryAllocator {
     int filled;
 
 public:
+    DeviceMemoryAllocator(OpKernelContext* context_)
+        : context(context_)
+        , filled(0)
+    {
+    }
 
-    DeviceMemoryAllocator(OpKernelContext* context_): context(context_), filled(0){}
-
-    template<typename t>
-    void allocate_device_memory(void ** ptr_address, int num_elements){
+    template <typename t>
+    void allocate_device_memory(void** ptr_address, int num_elements)
+    {
         DataType dataType = DT_UINT8;
         num_elements *= sizeof(t);
         auto tensor_ptr = &(tensors[filled]);
         filled++;
         //OP_REQUIRES_OK(context, context->allocate_temp(dataType, TensorShape({num_elements}), tensor_ptr));
-        auto status = context->allocate_temp(dataType, TensorShape({num_elements}), tensor_ptr);
-        if(!status.ok()){
+        auto status = context->allocate_temp(dataType, TensorShape({ num_elements }), tensor_ptr);
+        if (!status.ok()) {
             LOG(FATAL) << "GPU memory allocation failed (might be due to insufficient memory)\n";
         }
         *ptr_address = reinterpret_cast<t*>((*tensor_ptr).flat<unsigned char>().data());
     }
 
-    template<typename t> void memset(void * ptr, t value, int num_elements){
+    template <typename t>
+    void memset(void* ptr, t value, int num_elements)
+    {
         cudaMemset(ptr, value, num_elements * sizeof(t));
     }
 
-    template<typename t> void memcpy(void * device_ptr, void * host_ptr, int num_elements){
+    template <typename t>
+    void memcpy(void* device_ptr, void* host_ptr, int num_elements)
+    {
         cudaMemcpy(device_ptr, host_ptr, num_elements * sizeof(t), cudaMemcpyHostToDevice);
     }
 
@@ -94,32 +103,38 @@ class DeviceMemoryAllocator {
     int filled;
 
 public:
+    DeviceMemoryAllocator()
+        : filled(0)
+    {
+    }
 
-    DeviceMemoryAllocator(): filled(0){}
-
-    ~DeviceMemoryAllocator(){
-        for(int i=0; i < filled; i++)
+    ~DeviceMemoryAllocator()
+    {
+        for (int i = 0; i < filled; i++)
             gpuErrchk(cudaFree(*ptr_addresses[i]));
     }
 
-    template<typename t>
-    void allocate_device_memory(void ** ptr_address, int num_elements){
-        gpuErrchk(cudaMalloc(ptr_address, num_elements*sizeof(t)));
+    template <typename t>
+    void allocate_device_memory(void** ptr_address, int num_elements)
+    {
+        gpuErrchk(cudaMalloc(ptr_address, num_elements * sizeof(t)));
         ptr_addresses[filled] = ptr_address;
         filled++;
     }
 
-    template<typename t> void memset(void * ptr, t value, int num_elements){
+    template <typename t>
+    void memset(void* ptr, t value, int num_elements)
+    {
         gpuErrchk(cudaMemset(ptr, value, num_elements * sizeof(t)));
     }
 
-    template<typename t> void memcpy(void * device_ptr, void * host_ptr, int num_elements){
+    template <typename t>
+    void memcpy(void* device_ptr, void* host_ptr, int num_elements)
+    {
         gpuErrchk(cudaMemcpy(device_ptr, host_ptr, num_elements * sizeof(t), cudaMemcpyHostToDevice));
     }
-
 };
 
 #endif //GOOGLE_CUDA
 
 #endif //PERMUTOHEDRAL_LATTICE_DEVICEMEMORYALLOCATOR_H
-

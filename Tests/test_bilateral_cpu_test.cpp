@@ -1,26 +1,26 @@
 #include <cstdio>
-#include <cstring>
 #include <cstdlib>
+#include <cstring>
 #define cimg_display 0
 #include "CImg.h"
-#include <sys/time.h>
-#include <ctime>
 #include "bilateral_filter_cpu.h"
 #include "utils.h"
+#include <ctime>
+#include <sys/time.h>
 
 using T = double;
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv)
+{
     if (argc < 5) {
         printf("Usage: ./test_bilateral_cpu <input file> <output file> <spatial standard deviation> <color standard deviation>\n");
         return 1;
     }
 
-
     cimg_library::CImg<unsigned char> image(argv[1]);
     int N = image.width() * image.height();
-    int sdims[2]{image.height(), image.width()};
-    float pixel_depth=255.0;
+    int sdims[2]{ image.height(), image.width() };
+    float pixel_depth = 255.0;
 
     auto flat = get_flat_float_from_image<T>(image, pixel_depth);
 

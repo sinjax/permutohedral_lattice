@@ -23,11 +23,11 @@ SOFTWARE.*/
 
 #define BLOCK_SIZE 256
 
-#include <cstdio>
-#include <utility>
+#include "DeviceMemoryAllocator.h"
 #include "cuda_code_indexing.h"
 #include "cuda_runtime.h"
-#include "DeviceMemoryAllocator.h"
+#include <cstdio>
+#include <utility>
 
 //64 bit implementation not implemented for compute capability < 6.0
 // none trivial performance cost for compute capability < 6.0
@@ -40,28 +40,35 @@ __device__ double atomicAdd(double* address, double val)
     do {
         assumed = old;
         old = atomicCAS(address_as_ull, assumed,
-                        __double_as_longlong(val + __longlong_as_double(assumed)));
+            __double_as_longlong(val + __longlong_as_double(assumed)));
     } while (assumed != old);
     return __longlong_as_double(old);
 }
 #endif
 
-void cudaErrorCheck(){
+void cudaErrorCheck()
+{
     auto code = cudaGetLastError();
-    if(cudaSuccess != code){
-        fprintf(stderr,"GPU Error: %s\n", cudaGetErrorString(code));
+    if (cudaSuccess != code) {
+        fprintf(stderr, "GPU Error: %s\n", cudaGetErrorString(code));
         exit(code);
     }
 }
 
-template<typename T, int pd, int vd>class HashTableGPU{
+template <typename T, int pd, int vd>
+class HashTableGPU {
 public:
     int capacity;
-    T * values;
-    short * keys;
-    int * entries;
+    T* values;
+    short* keys;
+    int* entries;
 
-    HashTableGPU(int capacity_, DeviceMemoryAllocator* allocator): capacity(capacity_), values(nullptr), keys(nullptr), entries(nullptr){
+    HashTableGPU(int capacity_, DeviceMemoryAllocator* allocator)
+        : capacity(capacity_)
+        , values(nullptr)
+        , keys(nullptr)
+        , entries(nullptr)
+    {
 
         allocator->allocate_device_memory<T>((void**)&values, capacity * vd);
         allocator->memset<T>((void*)values, 0, capacity * vd);
@@ -73,11 +80,13 @@ public:
         allocator->memset<short>((void*)keys, 0, capacity * pd);
     }
 
-    __device__ int modHash(unsigned int n){
-        return(n % (2 * capacity));
+    __device__ int modHash(unsigned int n)
+    {
+        return (n % (2 * capacity));
     }
 
-    __device__ unsigned int hash(short *key) {
+    __device__ unsigned int hash(short* key)
+    {
         unsigned int k = 0;
         for (int i = 0; i < pd; i++) {
             k += key[i];
@@ -86,17 +95,18 @@ public:
         return k;
     }
 
-    __device__ int insert(short *key, unsigned int slot) {
+    __device__ int insert(short* key, unsigned int slot)
+    {
         int h = modHash(hash(key));
         while (1) {
-            int *e = entries + h;
+            int* e = entries + h;
 
             // If the cell is empty (-1), lock it (-2)
             int contents = atomicCAS(e, -1, -2);
 
-            if (contents == -2){
+            if (contents == -2) {
                 // If it was locked already, move on to the next cell
-            }else if (contents == -1) {
+            } else if (contents == -1) {
                 // If it was empty, we successfully locked it. Write our key.
                 for (int i = 0; i < pd; i++) {
                     keys[slot * pd + i] = key[i];
@@ -108,59 +118,62 @@ public:
                 // The cell is unlocked and has a key in it, check if it matches
                 bool match = true;
                 for (int i = 0; i < pd && match; i++) {
-                    match = (keys[contents*pd+i] == key[i]);
+                    match = (keys[contents * pd + i] == key[i]);
                 }
                 if (match)
                     return h;
             }
             // increment the bucket with wraparound
             h++;
-            if (h == capacity*2)
+            if (h == capacity * 2)
                 h = 0;
         }
     }
 
-    __device__ int retrieve(short *key) {
+    __device__ int retrieve(short* key)
+    {
 
         int h = modHash(hash(key));
         while (1) {
-            int *e = entries + h;
+            int* e = entries + h;
 
             if (*e == -1)
                 return -1;
 
             bool match = true;
             for (int i = 0; i < pd && match; i++) {
-                match = (keys[(*e)*pd+i] == key[i]);
+                match = (keys[(*e) * pd + i] == key[i]);
             }
             if (match)
                 return *e;
 
             h++;
-            if (h == capacity*2)
+            if (h == capacity * 2)
                 h = 0;
         }
     }
 };
 
-template<typename T> struct MatrixEntry {
+template <typename T>
+struct MatrixEntry {
     int index;
     T weight;
 };
 
-template<typename T, int pd, int vd>
+template <typename T, int pd, int vd>
 __global__ static void createLattice(const int n,
-                                     const T *positions,
-                                     const T *scaleFactor,
-                                     MatrixEntry<T> *matrix,
-                                     HashTableGPU<T, pd, vd> table) {
+    const T* positions,
+    const T* scaleFactor,
+    MatrixEntry<T>* matrix,
+    HashTableGPU<T, pd, vd> table)
+{
 
     const int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= n)
         return;
 
     T elevated[pd + 1];
-    const T *position = positions + idx * pd;
+    const T* position = positions + idx * pd;
     int rem0[pd + 1];
     int rank[pd + 1];
 
@@ -175,7 +188,6 @@ __global__ static void createLattice(const int n,
     }
     elevated[0] = sm;
 
-
     // Find the closest 0-colored simplex through rounding
     // greedily search for the closest zero-colored lattice point
     short sum = 0;
@@ -184,14 +196,13 @@ __global__ static void createLattice(const int n,
         T up = ceil(v) * (pd + 1);
         T down = floor(v) * (pd + 1);
         if (up - elevated[i] < elevated[i] - down) {
-            rem0[i] = (short) up;
+            rem0[i] = (short)up;
         } else {
-            rem0[i] = (short) down;
+            rem0[i] = (short)down;
         }
         sum += rem0[i];
     }
     sum /= pd + 1;
-
 
     // Find the simplex we are in and store it in rank (where rank describes what position coordinate i has in the sorted order of the features values)
     for (int i = 0; i <= pd; i++)
@@ -217,8 +228,7 @@ __global__ static void createLattice(const int n,
         }
     }
 
-
-    T barycentric[pd + 2]{0};
+    T barycentric[pd + 2]{ 0 };
     // Compute the barycentric coordinates (p.10 in [Adams etal 2010])
     for (int i = 0; i <= pd; i++) {
         T delta = (elevated[i] - rem0[i]) * (1.0 / (pd + 1));
@@ -227,7 +237,6 @@ __global__ static void createLattice(const int n,
     }
     // Wrap around
     barycentric[0] += 1.0 + barycentric[pd + 1];
-
 
     short key[pd];
     for (int remainder = 0; remainder <= pd; remainder++) {
@@ -247,8 +256,9 @@ __global__ static void createLattice(const int n,
     }
 }
 
-template<typename T, int pd, int vd>
-__global__ static void cleanHashTable(int n, HashTableGPU<T, pd, vd> table) {
+template <typename T, int pd, int vd>
+__global__ static void cleanHashTable(int n, HashTableGPU<T, pd, vd> table)
+{
 
     const int idx = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x * blockDim.y + threadIdx.x;
 
@@ -256,7 +266,7 @@ __global__ static void cleanHashTable(int n, HashTableGPU<T, pd, vd> table) {
         return;
 
     // find my hash table entry
-    int *e = table.entries + idx;
+    int* e = table.entries + idx;
 
     // Check if I created my own key in the previous phase
     if (*e >= 0) {
@@ -270,8 +280,9 @@ __global__ static void cleanHashTable(int n, HashTableGPU<T, pd, vd> table) {
     }
 }
 
-template<typename T, int pd, int vd>
-__global__ static void splatCache(const int n, const T *values, MatrixEntry<T> *matrix, HashTableGPU<T, pd, vd> table) {
+template <typename T, int pd, int vd>
+__global__ static void splatCache(const int n, const T* values, MatrixEntry<T>* matrix, HashTableGPU<T, pd, vd> table)
+{
 
     const int idx = threadIdx.x + blockIdx.x * blockDim.x;
     const int threadId = threadIdx.x;
@@ -281,11 +292,11 @@ __global__ static void splatCache(const int n, const T *values, MatrixEntry<T> *
     __shared__ int sharedOffsets[BLOCK_SIZE];
     __shared__ T sharedValues[BLOCK_SIZE * vd];
     int myOffset = -1;
-    T *myValue = sharedValues + threadId * vd;
+    T* myValue = sharedValues + threadId * vd;
 
     if (!outOfBounds) {
 
-        T *value = const_cast<T *>(values + idx * (vd - 1));
+        T* value = const_cast<T*>(values + idx * (vd - 1));
 
         MatrixEntry<T> r = matrix[idx * (pd + 1) + color];
 
@@ -326,14 +337,15 @@ __global__ static void splatCache(const int n, const T *values, MatrixEntry<T> *
     }
 
     // only the threads with something to write to main memory are still going
-    T *val = table.values + myOffset;
+    T* val = table.values + myOffset;
     for (int j = 0; j < vd; j++) {
         atomicAdd(val + j, myValue[j]);
     }
 }
 
-template<typename T, int pd, int vd>
-__global__ static void blur(int n, T *newValues, MatrixEntry<T> *matrix, int color, HashTableGPU<T, pd, vd> table) {
+template <typename T, int pd, int vd>
+__global__ static void blur(int n, T* newValues, MatrixEntry<T>* matrix, int color, HashTableGPU<T, pd, vd> table)
+{
 
     const int idx = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x * blockDim.y + threadIdx.x;
     if (idx >= n)
@@ -343,12 +355,10 @@ __global__ static void blur(int n, T *newValues, MatrixEntry<T> *matrix, int col
     if (matrix[idx].index != idx)
         return;
 
-
     // find my key and the keys of my neighbors
     short myKey[pd + 1];
     short np[pd + 1];
     short nm[pd + 1];
-
 
     for (int i = 0; i < pd; i++) {
         myKey[i] = table.keys[idx * pd + i];
@@ -361,37 +371,37 @@ __global__ static void blur(int n, T *newValues, MatrixEntry<T> *matrix, int col
     int offNp = table.retrieve(np);
     int offNm = table.retrieve(nm);
 
-    T *valMe = table.values + vd * idx;
-    T *valOut = newValues + vd * idx;
+    T* valMe = table.values + vd * idx;
+    T* valOut = newValues + vd * idx;
 
     //in case neighbours don't exist (lattice edges) offNp and offNm are -1
-    T zeros[vd]{0};
-    T *valNp = zeros; //or valMe? for edges?
-    T *valNm = zeros;
-    if(offNp >= 0)
+    T zeros[vd]{ 0 };
+    T* valNp = zeros; //or valMe? for edges?
+    T* valNm = zeros;
+    if (offNp >= 0)
         valNp = table.values + vd * offNp;
-    if(offNm >= 0)
+    if (offNm >= 0)
         valNm = table.values + vd * offNm;
-
 
     for (int i = 0; i < vd; i++)
         valOut[i] = 0.25 * valNp[i] + 0.5 * valMe[i] + 0.25 * valNm[i];
     //valOut[i] = 0.5f * valNp[i] + 1.0f * valMe[i] + 0.5f * valNm[i];
 }
 
-template<typename T, int pd, int vd>
-__global__ static void slice(const int n, T *values, MatrixEntry<T> *matrix, HashTableGPU<T, pd, vd> table) {
+template <typename T, int pd, int vd>
+__global__ static void slice(const int n, T* values, MatrixEntry<T>* matrix, HashTableGPU<T, pd, vd> table)
+{
 
     const int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= n)
         return;
 
-    T value[vd-1]{0};
+    T value[vd - 1]{ 0 };
     T weight = 0;
 
     for (int i = 0; i <= pd; i++) {
         MatrixEntry<T> r = matrix[idx * (pd + 1) + i];
-        T *val = table.values + r.index * vd;
+        T* val = table.values + r.index * vd;
         for (int j = 0; j < vd - 1; j++) {
             value[j] += r.weight * val[j];
         }
@@ -403,41 +413,46 @@ __global__ static void slice(const int n, T *values, MatrixEntry<T> *matrix, Has
         values[idx * (vd - 1) + j] = value[j] * weight;
 }
 
-template<typename T, int pd, int vd>class PermutohedralLatticeGPU{
+template <typename T, int pd, int vd>
+class PermutohedralLatticeGPU {
 public:
     int n; //number of pixels/voxels etc..
-    T * scaleFactor;
+    T* scaleFactor;
     MatrixEntry<T>* matrix;
     HashTableGPU<T, pd, vd> hashTable;
     cudaStream_t stream;
-    T * newValues; // auxiliary array for blur stage
+    T* newValues; // auxiliary array for blur stage
 
-    void init_scaleFactor(DeviceMemoryAllocator* allocator){
+    void init_scaleFactor(DeviceMemoryAllocator* allocator)
+    {
         T hostScaleFactor[pd];
         T invStdDev = (pd + 1) * sqrt(2.0f / 3);
         for (int i = 0; i < pd; i++) {
-            hostScaleFactor[i] = 1.0f / (sqrt((T) (i + 1) * (i + 2))) * invStdDev;
+            hostScaleFactor[i] = 1.0f / (sqrt((T)(i + 1) * (i + 2))) * invStdDev;
         }
         allocator->allocate_device_memory<T>((void**)&scaleFactor, pd);
         allocator->memcpy<T>((void*)scaleFactor, (void*)hostScaleFactor, pd);
     }
 
-    void init_matrix(DeviceMemoryAllocator* allocator){
+    void init_matrix(DeviceMemoryAllocator* allocator)
+    {
         allocator->allocate_device_memory<MatrixEntry<T>>((void**)&matrix, n * (pd + 1));
     }
 
-    void init_newValues(DeviceMemoryAllocator* allocator){
-        allocator->allocate_device_memory<T>((void**)&newValues,  n * (pd + 1) * vd);
-        allocator->memset<T>((void *)newValues, 0, n * (pd + 1) * vd);
+    void init_newValues(DeviceMemoryAllocator* allocator)
+    {
+        allocator->allocate_device_memory<T>((void**)&newValues, n * (pd + 1) * vd);
+        allocator->memset<T>((void*)newValues, 0, n * (pd + 1) * vd);
     }
 
-    PermutohedralLatticeGPU(int n_, DeviceMemoryAllocator* allocator, cudaStream_t stream_=0):
-            n(n_),
-            scaleFactor(nullptr),
-            matrix(nullptr),
-            newValues(nullptr),
-            hashTable(HashTableGPU<T, pd, vd>(n * (pd + 1), allocator)),
-            stream(stream_){
+    PermutohedralLatticeGPU(int n_, DeviceMemoryAllocator* allocator, cudaStream_t stream_ = 0)
+        : n(n_)
+        , scaleFactor(nullptr)
+        , matrix(nullptr)
+        , newValues(nullptr)
+        , hashTable(HashTableGPU<T, pd, vd>(n * (pd + 1), allocator))
+        , stream(stream_)
+    {
 
         if (n >= 65535 * BLOCK_SIZE) {
             printf("Not enough GPU memory (on x axis, you can change the code to use other grid dims)\n");
@@ -451,24 +466,25 @@ public:
     }
 
     // values and position must already be device pointers
-    void filter(T* output, const T* inputs, const T*  positions, bool reverse){
+    void filter(T* output, const T* inputs, const T* positions, bool reverse)
+    {
 
         dim3 blocks((n - 1) / BLOCK_SIZE + 1, 1, 1);
         dim3 blockSize(BLOCK_SIZE, 1, 1);
         int cleanBlockSize = 128;
         dim3 cleanBlocks((n - 1) / cleanBlockSize + 1, 2 * (pd + 1), 1);
 
-        createLattice<T, pd, vd> <<<blocks, blockSize, 0, stream>>>(n, positions, scaleFactor, matrix, hashTable);
+        createLattice<T, pd, vd><<<blocks, blockSize, 0, stream>>>(n, positions, scaleFactor, matrix, hashTable);
         cudaErrorCheck();
 
-        cleanHashTable<T, pd, vd> <<<cleanBlocks, cleanBlockSize, 0, stream>>>(2 * n * (pd + 1), hashTable);
+        cleanHashTable<T, pd, vd><<<cleanBlocks, cleanBlockSize, 0, stream>>>(2 * n * (pd + 1), hashTable);
         cudaErrorCheck();
 
         blocks.y = pd + 1;
         splatCache<T, pd, vd><<<blocks, blockSize, 0, stream>>>(n, inputs, matrix, hashTable);
         cudaErrorCheck();
 
-        for (int remainder=reverse?pd:0; remainder >= 0 && remainder <= pd; reverse?remainder--:remainder++) {
+        for (int remainder = reverse ? pd : 0; remainder >= 0 && remainder <= pd; reverse ? remainder-- : remainder++) {
             blur<T, pd, vd><<<cleanBlocks, cleanBlockSize, 0, stream>>>(n * (pd + 1), newValues, matrix, remainder, hashTable);
             cudaErrorCheck();
             std::swap(hashTable.values, newValues);
@@ -479,15 +495,16 @@ public:
     }
 };
 
-template<typename T>
-__global__ static void compute_kernel(const T * reference,
-                                      T * positions,
-                                      int num_super_pixels,
-                                      int reference_channels,
-                                      int n_sdims,
-                                      const int *sdims,
-                                      T spatial_std,
-                                      T feature_std){
+template <typename T>
+__global__ static void compute_kernel(const T* reference,
+    T* positions,
+    int num_super_pixels,
+    int reference_channels,
+    int n_sdims,
+    const int* sdims,
+    T spatial_std,
+    T feature_std)
+{
 
     const int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx >= num_super_pixels)
@@ -495,12 +512,12 @@ __global__ static void compute_kernel(const T * reference,
 
     int num_dims = n_sdims + reference_channels;
     int divisor = 1;
-    for(int sdim = n_sdims - 1; sdim >= 0; sdim--){
+    for (int sdim = n_sdims - 1; sdim >= 0; sdim--) {
         positions[num_dims * idx + sdim] = ((idx / divisor) % sdims[sdim]) / spatial_std;
         divisor *= sdims[sdim];
     }
 
-    for(int channel = 0; channel < reference_channels; channel++){
+    for (int channel = 0; channel < reference_channels; channel++) {
         positions[num_dims * idx + n_sdims + channel] = reference[idx * reference_channels + channel] / feature_std;
     }
 }

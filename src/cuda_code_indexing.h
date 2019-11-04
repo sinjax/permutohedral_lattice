@@ -11,15 +11,17 @@
 #define __managed__
 #define __restrict__
 // CUDA Synchronization
-inline void __syncthreads() {};
-inline void __threadfence_block() {};
-inline void __threadfence() {};
+inline void __syncthreads(){};
+inline void __threadfence_block(){};
+inline void __threadfence(){};
 inline void __threadfence_system();
-inline int __syncthreads_count(int predicate) {return predicate;}
-inline int __syncthreads_and(int predicate) {return predicate;}
-inline int __syncthreads_or(int predicate) {return predicate;}
-template<class T> inline T __clz(const T val) { return val; }
-template<class T> inline T __ldg(const T* address){return *address;}
+inline int __syncthreads_count(int predicate) { return predicate; }
+inline int __syncthreads_and(int predicate) { return predicate; }
+inline int __syncthreads_or(int predicate) { return predicate; }
+template <class T>
+inline T __clz(const T val) { return val; }
+template <class T>
+inline T __ldg(const T* address) { return *address; }
 // CUDA TYPES
 typedef unsigned short uchar;
 typedef unsigned short ushort;
@@ -28,243 +30,243 @@ typedef unsigned long ulong;
 typedef unsigned long long ulonglong;
 typedef long long longlong;
 
-typedef struct uchar1{
+typedef struct uchar1 {
     uchar x;
-}uchar1;
+} uchar1;
 
-typedef struct uchar2{
+typedef struct uchar2 {
     uchar x;
     uchar y;
-}uchar2;
+} uchar2;
 
-typedef struct uchar3{
+typedef struct uchar3 {
     uchar x;
     uchar y;
     uchar z;
-}uchar3;
+} uchar3;
 
-typedef struct uchar4{
+typedef struct uchar4 {
     uchar x;
     uchar y;
     uchar z;
     uchar w;
-}uchar4;
+} uchar4;
 
-typedef struct char1{
+typedef struct char1 {
     char x;
-}char1;
+} char1;
 
-typedef struct char2{
+typedef struct char2 {
     char x;
     char y;
-}char2;
+} char2;
 
-typedef struct char3{
+typedef struct char3 {
     char x;
     char y;
     char z;
-}char3;
+} char3;
 
-typedef struct char4{
+typedef struct char4 {
     char x;
     char y;
     char z;
     char w;
-}char4;
+} char4;
 
-typedef struct ushort1{
+typedef struct ushort1 {
     ushort x;
-}ushort1;
+} ushort1;
 
-typedef struct ushort2{
+typedef struct ushort2 {
     ushort x;
     ushort y;
-}ushort2;
+} ushort2;
 
-typedef struct ushort3{
+typedef struct ushort3 {
     ushort x;
     ushort y;
     ushort z;
-}ushort3;
+} ushort3;
 
-typedef struct ushort4{
+typedef struct ushort4 {
     ushort x;
     ushort y;
     ushort z;
     ushort w;
-}ushort4;
+} ushort4;
 
-typedef struct short1{
+typedef struct short1 {
     short x;
-}short1;
+} short1;
 
-typedef struct short2{
+typedef struct short2 {
     short x;
     short y;
-}short2;
+} short2;
 
-typedef struct short3{
+typedef struct short3 {
     short x;
     short y;
     short z;
-}short3;
+} short3;
 
-typedef struct short4{
+typedef struct short4 {
     short x;
     short y;
     short z;
     short w;
-}short4;
+} short4;
 
-typedef struct uint1{
+typedef struct uint1 {
     uint x;
-}uint1;
+} uint1;
 
-typedef struct uint2{
+typedef struct uint2 {
     uint x;
     uint y;
-}uint2;
+} uint2;
 
-typedef struct uint3{
+typedef struct uint3 {
     uint x;
     uint y;
     uint z;
-}uint3;
+} uint3;
 
-typedef struct uint4{
+typedef struct uint4 {
     uint x;
     uint y;
     uint z;
     uint w;
-}uint4;
+} uint4;
 
-typedef struct int1{
+typedef struct int1 {
     int x;
-}int1;
+} int1;
 
-typedef struct int2{
+typedef struct int2 {
     int x;
     int y;
-}int2;
+} int2;
 
-typedef struct int3{
+typedef struct int3 {
     int x;
     int y;
     int z;
-}int3;
+} int3;
 
-typedef struct int4{
+typedef struct int4 {
     int x;
     int y;
     int z;
     int w;
-}int4;
+} int4;
 
-typedef struct ulong1{
+typedef struct ulong1 {
     ulong x;
-}ulong1;
+} ulong1;
 
-typedef struct ulong2{
+typedef struct ulong2 {
     ulong x;
     ulong y;
-}ulong2;
+} ulong2;
 
-typedef struct ulong3{
+typedef struct ulong3 {
     ulong x;
     ulong y;
     ulong z;
-}ulong3;
+} ulong3;
 
-typedef struct ulong4{
+typedef struct ulong4 {
     ulong x;
     ulong y;
     ulong z;
     ulong w;
-}ulong4;
+} ulong4;
 
-typedef struct long1{
+typedef struct long1 {
     long x;
-}long1;
+} long1;
 
-typedef struct long2{
+typedef struct long2 {
     long x;
     long y;
-}long2;
+} long2;
 
-typedef struct long3{
+typedef struct long3 {
     long x;
     long y;
     long z;
-}long3;
+} long3;
 
-typedef struct long4{
+typedef struct long4 {
     long x;
     long y;
     long z;
     long w;
-}long4;
+} long4;
 
-typedef struct ulonglong1{
+typedef struct ulonglong1 {
     ulonglong x;
-}ulonglong1;
+} ulonglong1;
 
-typedef struct ulonglong2{
+typedef struct ulonglong2 {
     ulonglong x;
     ulonglong y;
-}ulonglong2;
+} ulonglong2;
 
-typedef struct ulonglong3{
+typedef struct ulonglong3 {
     ulonglong x;
     ulonglong y;
     ulonglong z;
-}ulonglong3;
+} ulonglong3;
 
-typedef struct ulonglong4{
+typedef struct ulonglong4 {
     ulonglong x;
     ulonglong y;
     ulonglong z;
     ulonglong w;
-}ulonglong4;
+} ulonglong4;
 
-typedef struct longlong1{
+typedef struct longlong1 {
     longlong x;
-}longlong1;
+} longlong1;
 
-typedef struct longlong2{
+typedef struct longlong2 {
     longlong x;
     longlong y;
-}longlong2;
+} longlong2;
 
-typedef struct float1{
+typedef struct float1 {
     float x;
-}float1;
+} float1;
 
-typedef struct float2{
+typedef struct float2 {
     float x;
     float y;
-}float2;
+} float2;
 
-typedef struct float3{
+typedef struct float3 {
     float x;
     float y;
     float z;
-}float3;
+} float3;
 
-typedef struct float4{
+typedef struct float4 {
     float x;
     float y;
     float z;
     float w;
-}float4;
+} float4;
 
-typedef struct double1{
+typedef struct double1 {
     double x;
-}double1;
+} double1;
 
-typedef struct double2{
+typedef struct double2 {
     double x;
     double y;
-}double2;
+} double2;
 
 typedef uint3 dim3;
 

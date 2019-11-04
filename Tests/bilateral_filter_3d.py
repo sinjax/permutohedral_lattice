@@ -11,13 +11,15 @@ theta_alpha = 10.0
 theta_beta = 0.5
 
 im = nib.load('Images/brain.nii')
-image = np.expand_dims(np.expand_dims(im.get_data(), axis=-1).astype(np.float32), axis=0)
+image = np.expand_dims(np.expand_dims(
+    im.get_data(), axis=-1).astype(np.float32), axis=0)
 image /= np.max(image)
 
 tf_input_image = tf.constant(image, dtype=tf.float32)
 tf_reference_image = tf.constant(image, dtype=tf.float32)
 
-output = module.bilateral(tf_input_image, tf_reference_image, theta_alpha=theta_alpha, theta_beta=theta_beta, theta_gamma=1.0, bilateral=False)
+output = module.bilateral(tf_input_image, tf_reference_image, theta_alpha=theta_alpha,
+                          theta_beta=theta_beta, theta_gamma=1.0, bilateral=False)
 
 with tf.Session() as sess:
     o = sess.run(output) * 3766

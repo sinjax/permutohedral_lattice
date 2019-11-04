@@ -15,13 +15,13 @@ static void bilateral_filter_cpu(T* input,
     T theta_beta)
 {
 
-    int pd = n_input_channels + n_sdims;
+    int pd = n_input_channels;
     int vd = n_input_channels + 1;
     int n = num_super_pixels;
 
     printf("Constructing kernel...\n");
     auto positions = new T[num_super_pixels * pd];
-    compute_kernel_cpu<T>(input, positions, n, 3, 2, sdims, theta_alpha, theta_beta);
+    compute_kernel_cpu<T>(input, positions, n, n_input_channels, n_sdims, sdims, theta_alpha, theta_beta);
 
     printf("Calling filter...\n");
     auto output = new T[num_super_pixels * n_input_channels];

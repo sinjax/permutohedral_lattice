@@ -26,7 +26,8 @@ import tensorflow as tf
 from tensorflow.python.framework import ops
 from os import path
 
-module = tf.load_op_library(path.join(path.dirname(path.abspath(__file__)), 'lattice_filter.so'))
+module = tf.load_op_library(path.join(path.dirname(
+    path.abspath(__file__)), 'lattice_filter.so'))
 
 
 @ops.RegisterGradient("LatticeFilter")
