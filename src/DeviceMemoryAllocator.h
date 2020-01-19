@@ -25,6 +25,7 @@ SOFTWARE.*/
 
 #include <cuda_runtime.h>
 #include <stdio.h>
+#include <iostream>
 // function for debugging cuda calls
 #define gpuErrchk(ans)                        \
     {                                         \
@@ -33,9 +34,9 @@ SOFTWARE.*/
 inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true)
 {
     if (code != cudaSuccess) {
-        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-        if (abort)
-            exit(code);
+        // fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+        // if (abort)
+        //     exit(code);
     }
 }
 
