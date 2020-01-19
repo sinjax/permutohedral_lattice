@@ -24,6 +24,7 @@ SOFTWARE.*/
 #define PERMUTOHEDRAL_LATTICE_DEVICEMEMORYALLOCATOR_H
 
 #include <cuda_runtime.h>
+#include <stdio.h>
 // function for debugging cuda calls
 #define gpuErrchk(ans)                        \
     {                                         \
